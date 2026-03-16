@@ -3,43 +3,45 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>MemeGen Pro - Multilínea y Mobile</title>
+    <title>MemeGen Pro - Mobile Fix</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://fonts.googleapis.com/css2?family=Anton&family=Arimo:wght@700&family=Bebas+Neue&family=Caveat:wght@700&family=Comic+Neue:wght@700&family=Fira+Sans:wght@900&family=Inter:wght@900&family=Lobster&family=Montserrat:wght@900&family=Open+Sans:wght@800&family=Oswald:wght@700&family=Pacifico&family=Playfair+Display:ital,wght@1,900&family=Raleway:wght@900&family=Roboto+Condensed:wght@700&family=Rubik+Mono+One&family=Staatliches&family=Teko:wght@700&family=Titillium+Web:wght@900&family=Ubuntu:wght@700&display=swap" rel="stylesheet">
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Source+Sans+Pro:wght@400;600;700&display=swap');
         
-        body { font-family: 'Source Sans Pro', sans-serif; background-color: #1c1e25; color: white; touch-action: none; }
+        body { font-family: 'Source Sans Pro', sans-serif; background-color: #1c1e25; color: white; overflow-x: hidden; }
         .scroll::-webkit-scrollbar { width: 6px; }
         .scroll::-webkit-scrollbar-track { background: #2d303a; }
         .scroll::-webkit-scrollbar-thumb { background: #4a4d5a; border-radius: 10px; }
 
-        canvas { max-width: 100%; height: auto; border-radius: 8px; background-color: #000; box-shadow: 0 20px 50px rgba(0,0,0,0.5); touch-action: none; }
+        canvas { max-width: 100%; height: auto; border-radius: 8px; background-color: #000; box-shadow: 0 10px 30px rgba(0,0,0,0.5); touch-action: none; }
         .drop-zone { border: 2px dashed #4a4d5a; transition: all 0.3s; }
         
-        .font-option { padding: 8px; border-radius: 4px; cursor: pointer; transition: background 0.2s; font-size: 14px; }
-        .font-option:hover { background: #3d414d; }
+        .font-option { padding: 12px; border-radius: 8px; cursor: pointer; transition: background 0.2s; font-size: 16px; border: 1px solid transparent; }
+        .font-option:hover { background: #3d414d; border-color: #699BFF; }
         .meme-thumb { transition: all 0.2s; border: 2px solid transparent; cursor: pointer; }
 
         #cropModal { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.9); z-index: 100; align-items: center; justify-content: center; padding: 10px; }
         #cropContainer { background: #1c1e25; padding: 15px; border-radius: 16px; width: 95%; max-width: 600px; max-height: 90%; overflow: hidden; display: flex; flex-direction: column; gap: 10px; }
-        #cropCanvas { max-width: 100%; max-height: 60vh; border: 1px solid #4a4d5a; }
+        #cropCanvas { max-width: 100%; max-height: 60vh; border: 1px solid #4a4d5a; touch-action: none; }
 
         @media (max-width: 768px) {
             .desktop-only { display: none; }
-            main { flex-direction: column; overflow-y: auto; }
+            main { flex-direction: column; overflow-y: auto; height: auto !important; }
             aside { width: 100% !important; border: none !important; flex-shrink: 0; }
-            #editorPanel { padding-bottom: 100px; }
+            #editorPanel { padding-bottom: 40px; }
             header { flex-wrap: wrap; height: auto; padding: 10px; gap: 10px; }
-            .canvas-section { min-height: 300px; padding: 15px; }
+            .canvas-section { min-height: 350px; padding: 15px; flex-shrink: 0; }
+            .mobile-order-last { order: 10; }
+            .mobile-order-first { order: -1; }
         }
     </style>
 </head>
-<body class="overflow-hidden md:h-screen flex flex-col">
+<body class="md:h-screen flex flex-col">
 
     <div id="cropModal">
         <div id="cropContainer">
-            <h3 id="cropTitle" class="text-lg font-bold text-[#699BFF]">Recortar Imagen</h3>
+            <h3 class="text-lg font-bold text-[#699BFF]">Recortar Imagen</h3>
             <canvas id="cropCanvas"></canvas>
             <div class="flex justify-end gap-3 mt-2">
                 <button onclick="closeCropModal()" class="px-4 py-3 rounded-lg bg-gray-700 text-sm font-bold">Cancelar</button>
@@ -53,9 +55,7 @@
             <div class="text-[#699BFF] font-bold text-xl md:text-2xl flex items-center select-none tracking-tighter">
                 🎭 <span class="ml-1">MEMEGEN</span> <span class="text-white ml-1 desktop-only">PRO</span>
             </div>
-            <div class="flex items-center gap-2">
-                <input type="text" id="filenameInput" value="mi-meme-pro" class="bg-[#2d303a] border border-[#4a4d5a] rounded-lg px-2 py-1 text-xs md:text-sm text-white focus:outline-none focus:border-[#699BFF] w-32 md:w-48">
-            </div>
+            <input type="text" id="filenameInput" value="mi-meme-pro" class="bg-[#2d303a] border border-[#4a4d5a] rounded-lg px-2 py-1 text-xs md:text-sm text-white focus:outline-none focus:border-[#699BFF] w-28 md:w-48">
         </div>
         <button onclick="downloadMeme()" class="bg-[#699BFF] hover:bg-[#5284e6] text-white px-4 md:px-5 py-2 rounded-xl font-bold text-xs md:text-sm shadow-lg">
             DESCARGAR
@@ -63,64 +63,76 @@
     </header>
 
     <main class="flex flex-grow overflow-hidden relative">
-        <aside class="w-72 border-r border-[#2d303a] bg-[#1c1e25] flex flex-col md:h-full max-h-[40vh] md:max-h-none order-2 md:order-1">
-            <div class="p-4 border-b border-[#2d303a] space-y-3">
-                <div onclick="triggerMainUpload()" class="drop-zone rounded-xl p-3 flex flex-col items-center justify-center cursor-pointer text-center bg-[#262931]">
-                    <span class="text-[10px] font-bold text-gray-400 uppercase">SUBIR FONDO</span>
+        <!-- Lista de plantillas (Izquierda) -->
+        <aside class="w-72 border-r border-[#2d303a] bg-[#1c1e25] flex flex-col md:h-full max-h-[30vh] md:max-h-none order-2 md:order-1">
+            <div class="p-3 border-b border-[#2d303a] space-y-2">
+                <div onclick="triggerMainUpload()" class="drop-zone rounded-xl p-2 flex flex-col items-center justify-center cursor-pointer text-center bg-[#262931]">
+                    <span class="text-[9px] font-bold text-gray-400 uppercase">SUBIR FONDO</span>
                     <input type="file" id="mainFileInput" accept="image/*" class="hidden" onchange="handleMainUpload(event)">
                 </div>
-                <button onclick="openCropModal(true)" class="w-full bg-[#2d303a] border border-[#4a4d5a] rounded-lg py-2 text-[10px] font-bold uppercase">Recortar Fondo</button>
             </div>
-            <div id="memeList" class="grid grid-cols-3 md:grid-cols-2 gap-2 p-3 overflow-y-auto scroll bg-[#14161a] flex-grow"></div>
+            <div id="memeList" class="grid grid-cols-4 md:grid-cols-2 gap-2 p-2 overflow-y-auto scroll bg-[#14161a] flex-grow"></div>
         </aside>
 
+        <!-- Área del Canvas (Centro) -->
         <section class="canvas-section flex-grow bg-[#0f1115] p-4 flex items-center justify-center overflow-hidden relative order-1 md:order-2">
             <div id="canvasWrapper" class="relative max-w-full max-h-full">
                 <canvas id="memeCanvas"></canvas>
             </div>
-            <div class="absolute bottom-4 md:bottom-8 flex gap-2 md:gap-3 bg-[#1c1e25]/90 backdrop-blur-md p-2 md:p-3 rounded-2xl border border-[#2d303a] shadow-2xl z-20">
-                <button onclick="addTextLayer()" class="flex flex-col items-center gap-1 p-2 md:p-0">
-                    <div class="bg-[#2d303a] p-3 rounded-xl hover:bg-[#699BFF] transition-colors"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M4 7V4h16v3M9 20h6M12 4v16"/></svg></div>
-                    <span class="text-[9px] font-bold text-gray-400 uppercase">Texto</span>
+            <div class="absolute bottom-4 flex gap-3 bg-[#1c1e25]/90 backdrop-blur-md p-2 rounded-2xl border border-[#2d303a] shadow-2xl z-20">
+                <button onclick="addTextLayer()" class="flex flex-col items-center gap-1">
+                    <div class="bg-[#2d303a] p-3 rounded-xl hover:bg-[#699BFF] transition-colors"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M4 7V4h16v3M9 20h6M12 4v16"/></svg></div>
+                    <span class="text-[10px] font-bold text-gray-400 uppercase">Texto</span>
                 </button>
-                <button onclick="triggerOverlayUpload()" class="flex flex-col items-center gap-1 p-2 md:p-0">
-                    <div class="bg-[#2d303a] p-3 rounded-xl hover:bg-[#699BFF] transition-colors"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M12 8v8M8 12h8"/></svg></div>
-                    <span class="text-[9px] font-bold text-gray-400 uppercase">Sticker</span>
+                <button onclick="triggerOverlayUpload()" class="flex flex-col items-center gap-1">
+                    <div class="bg-[#2d303a] p-3 rounded-xl hover:bg-[#699BFF] transition-colors"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M12 8v8M8 12h8"/></svg></div>
+                    <span class="text-[10px] font-bold text-gray-400 uppercase">Stick</span>
                     <input type="file" id="overlayFileInput" accept="image/*" class="hidden" onchange="handleOverlayUpload(event)">
                 </button>
             </div>
         </section>
 
+        <!-- Panel de edición (Derecha) -->
         <aside class="w-80 border-l border-[#2d303a] bg-[#1c1e25] p-5 overflow-y-auto scroll order-3">
             <div id="noSelectionMsg" class="py-10 flex flex-col items-center justify-center text-center opacity-40 md:h-full">
-                <span class="text-3xl mb-2">🖱️</span>
-                <p class="text-xs italic">Toca un elemento para editarlo</p>
+                <span class="text-4xl mb-4">👆</span>
+                <p class="text-sm font-medium">Toca el texto o la imagen en el lienzo para editarla</p>
             </div>
-            <div id="editorPanel" class="hidden space-y-5 pb-10">
-                <div class="flex justify-between items-center border-b border-[#2d303a] pb-3">
-                    <h2 id="layerTypeTitle" class="text-[10px] font-black text-[#699BFF] uppercase tracking-widest">Capa</h2>
-                    <button onclick="deleteSelectedLayer()" class="text-red-400 bg-red-400/10 p-2 rounded-lg">Borrar</button>
+            
+            <div id="editorPanel" class="hidden space-y-6">
+                <div class="flex justify-between items-center border-b border-[#2d303a] pb-4">
+                    <h2 id="layerTypeTitle" class="text-xs font-black text-[#699BFF] uppercase tracking-widest">Editor de Capa</h2>
+                    <button onclick="deleteSelectedLayer()" class="text-xs font-bold text-red-400 bg-red-400/10 px-3 py-2 rounded-lg hover:bg-red-400/20">ELIMINAR</button>
                 </div>
-                <div id="imageControls" class="hidden">
-                    <button onclick="openCropModal(false)" class="w-full bg-[#2d303a] border border-[#4a4d5a] rounded-xl py-3 text-xs font-bold uppercase">RECORTE STICKER</button>
-                </div>
-                <div id="textControls" class="space-y-4">
+
+                <div id="textControls" class="space-y-5">
                     <div>
-                        <label class="block text-[10px] font-bold text-gray-500 mb-2 uppercase">Contenido (Enter para nueva línea)</label>
-                        <textarea id="textInput" oninput="updateActiveLayer()" class="w-full bg-[#2d303a] border border-[#4a4d5a] rounded-xl p-3 text-white text-sm focus:outline-none h-24"></textarea>
+                        <label class="block text-[10px] font-bold text-gray-500 mb-2 uppercase">Texto (Multilínea)</label>
+                        <textarea id="textInput" oninput="updateActiveLayer()" class="w-full bg-[#2d303a] border border-[#4a4d5a] rounded-xl p-3 text-white text-base focus:outline-none focus:border-[#699BFF] h-28" placeholder="Escribe aquí..."></textarea>
                     </div>
                     <div>
-                        <label class="block text-[10px] font-bold text-gray-500 mb-2 uppercase">Fuente</label>
-                        <div id="fontGrid" class="grid grid-cols-1 gap-1 max-h-40 overflow-y-auto scroll bg-[#262931] rounded-xl p-2 border border-[#4a4d5a]"></div>
+                        <label class="block text-[10px] font-bold text-gray-500 mb-2 uppercase">Tipo de Letra</label>
+                        <div id="fontGrid" class="grid grid-cols-1 gap-1 max-h-48 overflow-y-auto scroll bg-[#262931] rounded-xl p-2 border border-[#4a4d5a]"></div>
                     </div>
                     <div class="grid grid-cols-2 gap-4">
-                        <div><label class="block text-[10px] font-bold text-gray-500 mb-1 uppercase">Texto</label><input type="color" id="textColor" oninput="updateActiveLayer()" class="w-full h-10 bg-[#2d303a] border-0 rounded-lg"></div>
-                        <div><label class="block text-[10px] font-bold text-gray-500 mb-1 uppercase">Contorno</label><input type="color" id="strokeColor" oninput="updateActiveLayer()" class="w-full h-10 bg-[#2d303a] border-0 rounded-lg"></div>
+                        <div><label class="block text-[10px] font-bold text-gray-500 mb-1 uppercase">Color</label><input type="color" id="textColor" oninput="updateActiveLayer()" class="w-full h-12 bg-[#2d303a] border-0 rounded-lg cursor-pointer"></div>
+                        <div><label class="block text-[10px] font-bold text-gray-500 mb-1 uppercase">Borde</label><input type="color" id="strokeColor" oninput="updateActiveLayer()" class="w-full h-12 bg-[#2d303a] border-0 rounded-lg cursor-pointer"></div>
                     </div>
                 </div>
-                <div class="space-y-4">
-                    <div><label class="text-[10px] font-bold text-gray-500 uppercase">Tamaño</label><input type="range" id="layerSize" min="10" max="1000" oninput="updateActiveLayer()" class="w-full accent-[#699BFF]"></div>
-                    <div id="strokeSizeControl"><label class="block text-[10px] font-bold text-gray-500 mb-1 uppercase">Contorno</label><input type="range" id="strokeSize" min="0" max="40" oninput="updateActiveLayer()" class="w-full accent-[#699BFF]"></div>
+
+                <div id="imageControls" class="hidden">
+                    <button onclick="openCropModal(false)" class="w-full bg-[#699BFF]/10 text-[#699BFF] border border-[#699BFF]/30 rounded-xl py-4 text-xs font-bold uppercase hover:bg-[#699BFF]/20">RECORTAR STICKER</button>
+                </div>
+
+                <div class="space-y-5 pt-4 border-t border-[#2d303a]">
+                    <div>
+                        <div class="flex justify-between mb-2"><label class="text-[10px] font-bold text-gray-500 uppercase">Tamaño</label><span id="sizeVal" class="text-[10px] font-bold text-[#699BFF]">100%</span></div>
+                        <input type="range" id="layerSize" min="10" max="1000" value="100" oninput="updateActiveLayer()" class="w-full accent-[#699BFF]">
+                    </div>
+                    <div id="strokeSizeControl">
+                        <div class="flex justify-between mb-2"><label class="text-[10px] font-bold text-gray-500 uppercase">Grosor de Borde</label><span id="strokeVal" class="text-[10px] font-bold text-[#699BFF]">5</span></div>
+                        <input type="range" id="strokeSize" min="0" max="40" value="8" oninput="updateActiveLayer()" class="w-full accent-[#699BFF]">
+                    </div>
                 </div>
             </div>
         </aside>
@@ -131,10 +143,21 @@
         const ctx = canvas.getContext('2d');
         const cropCanvas = document.getElementById('cropCanvas');
         const cropCtx = cropCanvas.getContext('2d');
+        
         let activeImage = new Image();
         activeImage.crossOrigin = "anonymous";
-        let originalMainImage = null, layers = [], selectedLayerIndex = -1, isDragging = false, dragStartX, dragStartY;
-        let isResizingCrop = false, activeCorner = null, cropArea = { x: 50, y: 50, w: 200, h: 200 }, CORNER_SIZE = 24, croppingMain = false;
+        
+        let originalMainImage = null, 
+            layers = [], 
+            selectedLayerIndex = -1, 
+            isDragging = false, 
+            dragStartX, dragStartY;
+
+        let isResizingCrop = false, 
+            activeCorner = null, 
+            cropArea = { x: 50, y: 50, w: 200, h: 200 }, 
+            CORNER_SIZE = 30, 
+            croppingMain = false;
 
         const templates = [
             { name: "Drake", url: "https://i.imgflip.com/30b1gx.jpg" },
@@ -142,7 +165,9 @@
             { name: "Two Buttons", url: "https://i.imgflip.com/1g8my4.jpg" },
             { name: "Batman", url: "https://i.imgflip.com/9ehk.jpg" },
             { name: "Change Mind", url: "https://i.imgflip.com/24y43o.jpg" },
-            { name: "Disaster", url: "https://i.imgflip.com/23ls.jpg" }
+            { name: "Disaster", url: "https://i.imgflip.com/23ls.jpg" },
+            { name: "Spiderman", url: "https://i.imgflip.com/1bgw.jpg" },
+            { name: "Success", url: "https://i.imgflip.com/1bhk.jpg" }
         ];
 
         const fonts = [
@@ -150,15 +175,15 @@
             { name: 'Montserrat', family: "'Montserrat', sans-serif" },
             { name: 'Bebas Neue', family: "'Bebas Neue', cursive" },
             { name: 'Comic Sans', family: "'Comic Neue', cursive" },
-            { name: 'Anton', family: "'Anton', sans-serif" }
+            { name: 'Anton', family: "'Anton', sans-serif" },
+            { name: 'Oswald', family: "'Oswald', sans-serif" }
         ];
 
         function init() {
             renderTemplates(templates);
             renderFontOptions();
             loadMeme(templates[0].url);
-            setupCanvasEvents();
-            setupCropEvents();
+            setupEvents();
         }
 
         function renderTemplates(list) {
@@ -166,8 +191,8 @@
             container.innerHTML = '';
             list.forEach(m => {
                 const div = document.createElement('div');
-                div.className = 'meme-thumb bg-[#2d303a] rounded-lg p-1 overflow-hidden';
-                div.innerHTML = `<img src="${m.url}" class="w-full h-16 md:h-20 object-cover rounded-md">`;
+                div.className = 'meme-thumb bg-[#2d303a] rounded-lg p-1 overflow-hidden h-14 md:h-20';
+                div.innerHTML = `<img src="${m.url}" class="w-full h-full object-cover rounded-md">`;
                 div.onclick = () => loadMeme(m.url);
                 container.appendChild(div);
             });
@@ -192,16 +217,20 @@
 
         function getPointerPos(c, e) {
             const rect = c.getBoundingClientRect();
+            const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+            const clientY = e.touches ? e.touches[0].clientY : e.clientY;
             return {
-                x: (e.clientX - rect.left) * (c.width / rect.width),
-                y: (e.clientY - rect.top) * (c.height / rect.height)
+                x: (clientX - rect.left) * (c.width / rect.width),
+                y: (clientY - rect.top) * (c.height / rect.height)
             };
         }
 
-        function setupCanvasEvents() {
-            const startHandler = (e) => {
+        function setupEvents() {
+            const startInteraction = (e) => {
                 const pos = getPointerPos(canvas, e);
                 let found = -1;
+                
+                // Iterar capas de adelante hacia atrás
                 for (let i = layers.length - 1; i >= 0; i--) {
                     const l = layers[i];
                     if (l.type === 'text') {
@@ -214,44 +243,93 @@
                             const w = ctx.measureText(line.toUpperCase()).width;
                             if(w > maxW) maxW = w;
                         });
-                        if (pos.x >= l.x - maxW/2 - 20 && pos.x <= l.x + maxW/2 + 20 && pos.y >= l.y - h - 20 && pos.y <= l.y + totalH - h + 20) { found = i; break; }
-                    } else if (pos.x >= l.x && pos.x <= l.x + l.width && pos.y >= l.y && pos.y <= l.y + l.height) { found = i; break; }
+                        // Padding extra para móvil (40px)
+                        const hitBox = 40;
+                        if (pos.x >= l.x - maxW/2 - hitBox && pos.x <= l.x + maxW/2 + hitBox && 
+                            pos.y >= l.y - h - hitBox && pos.y <= l.y + totalH - h + hitBox) {
+                            found = i; break;
+                        }
+                    } else {
+                        const hitBox = 20;
+                        if (pos.x >= l.x - hitBox && pos.x <= l.x + l.width + hitBox && 
+                            pos.y >= l.y - hitBox && pos.y <= l.y + l.height + hitBox) {
+                            found = i; break;
+                        }
+                    }
                 }
+
                 selectLayer(found);
-                if (found !== -1) { isDragging = true; dragStartX = pos.x - layers[found].x; dragStartY = pos.y - layers[found].y; }
+                if (found !== -1) {
+                    isDragging = true;
+                    dragStartX = pos.x - layers[found].x;
+                    dragStartY = pos.y - layers[found].y;
+                    if (e.cancelable) e.preventDefault();
+                }
             };
-            const moveHandler = (e) => {
+
+            const moveInteraction = (e) => {
                 if (!isDragging || selectedLayerIndex === -1) return;
-                e.preventDefault();
                 const pos = getPointerPos(canvas, e);
                 layers[selectedLayerIndex].x = pos.x - dragStartX;
                 layers[selectedLayerIndex].y = pos.y - dragStartY;
                 drawMeme();
+                if (e.cancelable) e.preventDefault();
             };
-            canvas.addEventListener('mousedown', startHandler);
-            canvas.addEventListener('touchstart', (e) => { if(e.touches[0]) startHandler(e.touches[0]); });
-            window.addEventListener('mousemove', moveHandler);
-            window.addEventListener('touchmove', (e) => { if(e.touches[0]) moveHandler(e.touches[0]); }, { passive: false });
-            window.addEventListener('mouseup', () => isDragging = false);
-            window.addEventListener('touchend', () => isDragging = false);
+
+            const endInteraction = () => { isDragging = false; };
+
+            canvas.addEventListener('mousedown', startInteraction);
+            canvas.addEventListener('touchstart', startInteraction, { passive: false });
+            
+            window.addEventListener('mousemove', moveInteraction);
+            window.addEventListener('touchmove', moveInteraction, { passive: false });
+            
+            window.addEventListener('mouseup', endInteraction);
+            window.addEventListener('touchend', endInteraction);
+
+            // Crop Events
+            cropCanvas.addEventListener('mousedown', startCropDrag);
+            cropCanvas.addEventListener('touchstart', startCropDrag, { passive: false });
+        }
+
+        function startCropDrag(e) {
+            const pos = getPointerPos(cropCanvas, e);
+            activeCorner = getActiveCorner(pos);
+            if (activeCorner) {
+                isResizingCrop = true;
+                if (e.cancelable) e.preventDefault();
+            }
         }
 
         function selectLayer(index) {
             selectedLayerIndex = index;
-            const panel = document.getElementById('editorPanel'), msg = document.getElementById('noSelectionMsg');
-            if (index === -1) { panel.classList.add('hidden'); msg.classList.remove('hidden'); }
-            else {
-                panel.classList.remove('hidden'); msg.classList.add('hidden');
-                const l = layers[index], isText = l.type === 'text';
+            const panel = document.getElementById('editorPanel'), 
+                  msg = document.getElementById('noSelectionMsg');
+            
+            if (index === -1) {
+                panel.classList.add('hidden');
+                msg.classList.remove('hidden');
+            } else {
+                panel.classList.remove('hidden');
+                msg.classList.add('hidden');
+                const l = layers[index], isText = (l.type === 'text');
+                
                 document.getElementById('textControls').classList.toggle('hidden', !isText);
                 document.getElementById('imageControls').classList.toggle('hidden', isText);
+                document.getElementById('strokeSizeControl').classList.toggle('hidden', !isText);
+                
                 if (isText) {
                     document.getElementById('textInput').value = l.text;
                     document.getElementById('layerSize').value = l.size;
                     document.getElementById('strokeSize').value = l.strokeSize;
                     document.getElementById('textColor').value = l.color;
                     document.getElementById('strokeColor').value = l.stroke;
-                } else { document.getElementById('layerSize').value = l.width; }
+                    document.getElementById('sizeVal').innerText = l.size + 'px';
+                    document.getElementById('strokeVal').innerText = l.strokeSize;
+                } else {
+                    document.getElementById('layerSize').value = l.width;
+                    document.getElementById('sizeVal').innerText = Math.round(l.width) + 'px';
+                }
             }
             drawMeme();
         }
@@ -259,6 +337,7 @@
         function drawMeme() {
             ctx.clearRect(0, 0, canvas.width, canvas.height);
             if (activeImage.src) ctx.drawImage(activeImage, 0, 0, canvas.width, canvas.height);
+            
             layers.forEach((l, i) => {
                 ctx.save();
                 if (l.type === 'text') {
@@ -269,12 +348,21 @@
                     lines.forEach((line, index) => {
                         const txt = line.toUpperCase();
                         const yPos = l.y + (index * lineHeight);
-                        if (l.strokeSize > 0) { ctx.strokeStyle = l.stroke; ctx.lineWidth = l.strokeSize; ctx.strokeText(txt, l.x, yPos); }
-                        ctx.fillStyle = l.color; ctx.fillText(txt, l.x, yPos);
+                        if (l.strokeSize > 0) { 
+                            ctx.strokeStyle = l.stroke; 
+                            ctx.lineWidth = l.strokeSize; 
+                            ctx.strokeText(txt, l.x, yPos); 
+                        }
+                        ctx.fillStyle = l.color; 
+                        ctx.fillText(txt, l.x, yPos);
                     });
-                } else { ctx.drawImage(l.img, l.x, l.y, l.width, l.height); }
+                } else { 
+                    ctx.drawImage(l.img, l.x, l.y, l.width, l.height); 
+                }
+
+                // Indicador de selección
                 if (i === selectedLayerIndex) {
-                    ctx.strokeStyle = '#699BFF'; ctx.lineWidth = 4; ctx.setLineDash([5,5]);
+                    ctx.strokeStyle = '#699BFF'; ctx.lineWidth = 4; ctx.setLineDash([8, 4]);
                     if (l.type === 'text') {
                         const lines = l.text.split('\n');
                         let maxW = 0;
@@ -282,30 +370,51 @@
                             const w = ctx.measureText(line.toUpperCase()).width;
                             if(w > maxW) maxW = w;
                         });
-                        ctx.strokeRect(l.x - maxW/2 - 10, l.y - l.size, maxW + 20, (lines.length * l.size * 1.1) + 10);
-                    } else { ctx.strokeRect(l.x - 2, l.y - 2, l.width + 4, l.height + 4); }
+                        ctx.strokeRect(l.x - maxW/2 - 15, l.y - l.size - 5, maxW + 30, (lines.length * l.size * 1.1) + 20);
+                    } else { 
+                        ctx.strokeRect(l.x - 5, l.y - 5, l.width + 10, l.height + 10); 
+                    }
                 }
                 ctx.restore();
             });
         }
 
         function addTextLayer() {
-            layers.push({ type:'text', text:'TEXTO\nAQUÍ', x:canvas.width/2, y:canvas.height/2, size:60, strokeSize:8, color:'#ffffff', stroke:'#000000', fontFamily:'Impact, sans-serif' });
-            selectLayer(layers.length-1);
+            layers.push({ 
+                type:'text', 
+                text:'TEXTO\nAQUÍ', 
+                x:canvas.width/2, 
+                y:canvas.height/4, 
+                size:60, 
+                strokeSize:8, 
+                color:'#ffffff', 
+                stroke:'#000000', 
+                fontFamily:'Impact, sans-serif' 
+            });
+            selectLayer(layers.length - 1);
+            // Hacer scroll al editor en móvil
+            if (window.innerWidth < 768) {
+                document.getElementById('editorPanel').scrollIntoView({ behavior: 'smooth' });
+            }
         }
 
         function updateActiveLayer() {
             if (selectedLayerIndex === -1) return;
             const l = layers[selectedLayerIndex];
+            const sizeInput = document.getElementById('layerSize').value;
+            
             if (l.type === 'text') {
                 l.text = document.getElementById('textInput').value;
-                l.size = parseInt(document.getElementById('layerSize').value);
+                l.size = parseInt(sizeInput);
                 l.strokeSize = parseInt(document.getElementById('strokeSize').value);
                 l.color = document.getElementById('textColor').value;
                 l.stroke = document.getElementById('strokeColor').value;
+                document.getElementById('sizeVal').innerText = l.size + 'px';
+                document.getElementById('strokeVal').innerText = l.strokeSize;
             } else {
-                l.width = parseInt(document.getElementById('layerSize').value);
+                l.width = parseInt(sizeInput);
                 l.height = l.width * l.originalRatio;
+                document.getElementById('sizeVal').innerText = Math.round(l.width) + 'px';
             }
             drawMeme();
         }
@@ -315,34 +424,22 @@
             let imgToCrop = isMain ? (originalMainImage || activeImage) : layers[selectedLayerIndex].originalImg;
             if (!imgToCrop) return;
             document.getElementById('cropModal').style.display = 'flex';
-            cropCanvas.width = imgToCrop.width; cropCanvas.height = imgToCrop.height;
+            cropCanvas.width = imgToCrop.width; 
+            cropCanvas.height = imgToCrop.height;
             cropArea = { x: imgToCrop.width*0.1, y: imgToCrop.height*0.1, w: imgToCrop.width*0.8, h: imgToCrop.height*0.8 };
             drawCrop(imgToCrop);
         }
 
-        function setupCropEvents() {
-            const move = (e) => {
-                if (!isResizingCrop) return;
-                e.preventDefault();
-                const pos = getPointerPos(cropCanvas, e);
-                if (activeCorner === 'tl') { const dx = pos.x - cropArea.x; cropArea.x = pos.x; cropArea.w -= dx; const dy = pos.y - cropArea.y; cropArea.y = pos.y; cropArea.h -= dy; }
-                else if (activeCorner === 'tr') { cropArea.w = pos.x - cropArea.x; const dy = pos.y - cropArea.y; cropArea.y = pos.y; cropArea.h -= dy; }
-                else if (activeCorner === 'bl') { const dx = pos.x - cropArea.x; cropArea.x = pos.x; cropArea.w -= dx; cropArea.h = pos.y - cropArea.y; }
-                else if (activeCorner === 'br') { cropArea.w = pos.x - cropArea.x; cropArea.h = pos.y - cropArea.y; }
-                if (cropArea.w < 20) cropArea.w = 20; if (cropArea.h < 20) cropArea.h = 20;
-                drawCrop(croppingMain ? (originalMainImage || activeImage) : layers[selectedLayerIndex].originalImg);
-            };
-            cropCanvas.addEventListener('mousedown', (e) => { const pos = getPointerPos(cropCanvas, e); activeCorner = getActiveCorner(pos); if(activeCorner) isResizingCrop = true; });
-            cropCanvas.addEventListener('touchstart', (e) => { const pos = getPointerPos(cropCanvas, e.touches[0]); activeCorner = getActiveCorner(pos); if(activeCorner) isResizingCrop = true; });
-            window.addEventListener('mousemove', move);
-            window.addEventListener('touchmove', (e) => { if(e.touches[0]) move(e.touches[0]); }, { passive: false });
-            window.addEventListener('mouseup', () => isResizingCrop = false);
-            window.addEventListener('touchend', () => isResizingCrop = false);
-        }
-
         function getActiveCorner(pos) {
-            const corners = { tl: { x: cropArea.x, y: cropArea.y }, tr: { x: cropArea.x + cropArea.w, y: cropArea.y }, bl: { x: cropArea.x, y: cropArea.y + cropArea.h }, br: { x: cropArea.x + cropArea.w, y: cropArea.y + cropArea.h } };
-            for (const [id, c] of Object.entries(corners)) { if (Math.abs(pos.x - c.x) < CORNER_SIZE * 2 && Math.abs(pos.y - c.y) < CORNER_SIZE * 2) return id; }
+            const corners = { 
+                tl: { x: cropArea.x, y: cropArea.y }, 
+                tr: { x: cropArea.x + cropArea.w, y: cropArea.y }, 
+                bl: { x: cropArea.x, y: cropArea.y + cropArea.h }, 
+                br: { x: cropArea.x + cropArea.w, y: cropArea.y + cropArea.h } 
+            };
+            for (const [id, c] of Object.entries(corners)) { 
+                if (Math.abs(pos.x - c.x) < CORNER_SIZE * 2 && Math.abs(pos.y - c.y) < CORNER_SIZE * 2) return id; 
+            }
             return null;
         }
 
@@ -354,31 +451,105 @@
             cropCtx.fillRect(0, cropArea.y + cropArea.h, cropCanvas.width, cropCanvas.height - (cropArea.y + cropArea.h));
             cropCtx.fillRect(0, cropArea.y, cropArea.x, cropArea.h);
             cropCtx.fillRect(cropArea.x + cropArea.w, cropArea.y, cropCanvas.width - (cropArea.x + cropArea.w), cropArea.h);
-            cropCtx.strokeStyle = '#699BFF'; cropCtx.lineWidth = 3; cropCtx.strokeRect(cropArea.x, cropArea.y, cropArea.w, cropArea.h);
+            cropCtx.strokeStyle = '#699BFF'; cropCtx.lineWidth = 4; cropCtx.strokeRect(cropArea.x, cropArea.y, cropArea.w, cropArea.h);
             cropCtx.fillStyle = '#699BFF';
-            [{x: cropArea.x, y: cropArea.y}, {x: cropArea.x + cropArea.w, y: cropArea.y}, {x: cropArea.x, y: cropArea.y + cropArea.h}, {x: cropArea.x + cropArea.w, y: cropArea.y + cropArea.h}].forEach(c => { cropCtx.beginPath(); cropCtx.arc(c.x, c.y, CORNER_SIZE/2, 0, Math.PI*2); cropCtx.fill(); });
+            [{x: cropArea.x, y: cropArea.y}, {x: cropArea.x + cropArea.w, y: cropArea.y}, {x: cropArea.x, y: cropArea.y + cropArea.h}, {x: cropArea.x + cropArea.w, y: cropArea.y + cropArea.h}].forEach(c => { 
+                cropCtx.beginPath(); cropCtx.arc(c.x, c.y, CORNER_SIZE/1.5, 0, Math.PI*2); cropCtx.fill(); 
+            });
         }
 
         function applyCrop() {
-            const x = Math.max(0, cropArea.x), y = Math.max(0, cropArea.y), w = Math.min(cropArea.w, cropCanvas.width - x), h = Math.min(cropArea.h, cropCanvas.height - y);
+            const x = Math.max(0, cropArea.x), y = Math.max(0, cropArea.y), w = Math.max(10, Math.min(cropArea.w, cropCanvas.width - x)), h = Math.max(10, Math.min(cropArea.h, cropCanvas.height - y));
             const tempC = document.createElement('canvas'); tempC.width = w; tempC.height = h;
             const sourceImg = croppingMain ? (originalMainImage || activeImage) : layers[selectedLayerIndex].originalImg;
             tempC.getContext('2d').drawImage(sourceImg, x, y, w, h, 0, 0, w, h);
             const newImg = new Image(); newImg.src = tempC.toDataURL();
             newImg.onload = () => {
-                if (croppingMain) { activeImage = newImg; const max = 1000; let cw = activeImage.width, ch = activeImage.height; if (cw > max) { ch = (max/cw)*ch; cw = max; } canvas.width = cw; canvas.height = ch; closeCropModal(); drawMeme(); }
-                else { const l = layers[selectedLayerIndex]; l.img = newImg; l.originalRatio = h / w; l.height = l.width * l.originalRatio; closeCropModal(); drawMeme(); }
+                if (croppingMain) { 
+                    activeImage = newImg; 
+                    const max = 1200; let cw = activeImage.width, ch = activeImage.height; 
+                    if (cw > max) { ch = (max/cw)*ch; cw = max; } 
+                    canvas.width = cw; canvas.height = ch; 
+                    closeCropModal(); drawMeme(); 
+                }
+                else { 
+                    const l = layers[selectedLayerIndex]; 
+                    l.img = newImg; l.originalRatio = h / w; l.height = l.width * l.originalRatio; 
+                    closeCropModal(); drawMeme(); 
+                }
             };
         }
 
         function closeCropModal() { document.getElementById('cropModal').style.display = 'none'; }
-        function loadMeme(url) { const img = new Image(); img.crossOrigin = "anonymous"; img.src = url; img.onload = () => { originalMainImage = img; activeImage = img; const max = 1000; let w = activeImage.width, h = activeImage.height; if (w > max) { h = (max/w)*h; w = max; } canvas.width = w; canvas.height = h; drawMeme(); }; }
+        
+        function loadMeme(url) { 
+            const img = new Image(); 
+            img.crossOrigin = "anonymous"; 
+            img.src = url; 
+            img.onload = () => { 
+                originalMainImage = img; 
+                activeImage = img; 
+                const max = 1200; 
+                let w = activeImage.width, h = activeImage.height; 
+                if (w > max) { h = (max/w)*h; w = max; } 
+                canvas.width = w; canvas.height = h; 
+                drawMeme(); 
+            }; 
+        }
+
         function triggerOverlayUpload() { document.getElementById('overlayFileInput').click(); }
-        function handleOverlayUpload(e) { const f = e.target.files[0]; if (!f) return; const r = new FileReader(); r.onload = (ev) => { const img = new Image(); img.src = ev.target.result; img.onload = () => { layers.push({ type:'image', img:img, originalImg:img, x:50, y:50, width:200, height:200*(img.height/img.width), originalRatio:img.height/img.width }); selectLayer(layers.length-1); }; }; r.readAsDataURL(f); }
+        
+        function handleOverlayUpload(e) { 
+            const f = e.target.files[0]; if (!f) return; 
+            const r = new FileReader(); 
+            r.onload = (ev) => { 
+                const img = new Image(); img.src = ev.target.result; 
+                img.onload = () => { 
+                    layers.push({ 
+                        type:'image', img:img, originalImg:img, x:50, y:50, 
+                        width:canvas.width/3, height:(canvas.width/3)*(img.height/img.width), 
+                        originalRatio:img.height/img.width 
+                    }); 
+                    selectLayer(layers.length-1); 
+                }; 
+            }; 
+            r.readAsDataURL(f); 
+        }
+
         function deleteSelectedLayer() { if(selectedLayerIndex !== -1) { layers.splice(selectedLayerIndex, 1); selectLayer(-1); } }
+        
         function triggerMainUpload() { document.getElementById('mainFileInput').click(); }
-        function handleMainUpload(e) { const f = e.target.files[0]; if(!f) return; const r = new FileReader(); r.onload = (ev) => { const img = new Image(); img.src = ev.target.result; img.onload = () => { originalMainImage = img; activeImage = img; const max = 1000; let w = activeImage.width, h = activeImage.height; if (w > max) { h = (max/w)*h; w = max; } canvas.width = w; canvas.height = h; drawMeme(); } }; r.readAsDataURL(f); }
-        function downloadMeme() { const old = selectedLayerIndex; selectedLayerIndex = -1; drawMeme(); const fileName = document.getElementById('filenameInput').value.trim() || 'mi-meme'; setTimeout(() => { const a = document.createElement('a'); a.download = `${fileName}.png`; a.href = canvas.toDataURL(); a.click(); selectedLayerIndex = old; drawMeme(); }, 50); }
+        
+        function handleMainUpload(e) { 
+            const f = e.target.files[0]; if(!f) return; 
+            const r = new FileReader(); 
+            r.onload = (ev) => { 
+                const img = new Image(); img.src = ev.target.result; 
+                img.onload = () => { 
+                    originalMainImage = img; activeImage = img; 
+                    const max = 1200; let w = activeImage.width, h = activeImage.height; 
+                    if (w > max) { h = (max/w)*h; w = max; } 
+                    canvas.width = w; canvas.height = h; 
+                    drawMeme(); 
+                } 
+            }; 
+            r.readAsDataURL(f); 
+        }
+
+        function downloadMeme() { 
+            const old = selectedLayerIndex; 
+            selectedLayerIndex = -1; 
+            drawMeme(); 
+            const fileName = document.getElementById('filenameInput').value.trim() || 'mi-meme'; 
+            setTimeout(() => { 
+                const a = document.createElement('a'); 
+                a.download = `${fileName}.png`; 
+                a.href = canvas.toDataURL('image/png', 1.0); 
+                a.click(); 
+                selectedLayerIndex = old; 
+                drawMeme(); 
+            }, 100); 
+        }
 
         window.onload = init;
     </script>
