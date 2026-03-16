@@ -13,10 +13,9 @@
         .scroll::-webkit-scrollbar-track { background: #2d303a; }
         .scroll::-webkit-scrollbar-thumb { background: #4a4d5a; border-radius: 10px; }
 
-        /* Mejora 1: Asegurar que el canvas no sea tapado por botones en móvil */
         canvas { 
             max-width: 100%; 
-            max-height: 70vh; /* Limita la altura para dejar espacio abajo */
+            max-height: 70vh; 
             height: auto; 
             border-radius: 8px; 
             background-color: #000; 
@@ -31,7 +30,6 @@
         .font-option { padding: 10px; border-radius: 8px; cursor: pointer; transition: background 0.2s; color: white; border: 1px solid transparent; }
         .font-option:hover { background: #3d414d; border-color: #699BFF; }
 
-        /* Aviso de edición (Mejora 2) */
         #editNotice {
             position: fixed;
             top: 80px;
@@ -54,10 +52,10 @@
             .desktop-only { display: none; }
             main { flex-direction: column; height: auto !important; }
             .canvas-section { 
-                height: 80vh; /* Espacio definido para trabajar */
+                height: 80vh; 
                 padding: 10px; 
                 display: flex;
-                align-items: flex-start; /* Empieza desde arriba */
+                align-items: flex-start; 
                 padding-top: 20px;
             }
             aside { width: 100% !important; border: none !important; }
@@ -142,8 +140,18 @@
                         <div id="fontGrid" class="grid grid-cols-1 gap-1 max-h-40 overflow-y-auto scroll bg-[#262931] rounded-xl p-2 border border-[#4a4d5a]"></div>
                     </div>
                     <div class="grid grid-cols-2 gap-3">
-                        <input type="color" id="textColor" oninput="updateActiveLayer()" class="w-full h-10 bg-[#2d303a] border-0 rounded-lg">
-                        <input type="color" id="strokeColor" oninput="updateActiveLayer()" class="w-full h-10 bg-[#2d303a] border-0 rounded-lg">
+                        <div class="space-y-1">
+                            <label class="text-[8px] text-gray-400 uppercase font-bold">Relleno</label>
+                            <input type="color" id="textColor" oninput="updateActiveLayer()" class="w-full h-10 bg-[#2d303a] border-0 rounded-lg">
+                        </div>
+                        <div class="space-y-1">
+                            <label class="text-[8px] text-gray-400 uppercase font-bold">Borde</label>
+                            <input type="color" id="strokeColor" oninput="updateActiveLayer()" class="w-full h-10 bg-[#2d303a] border-0 rounded-lg">
+                        </div>
+                    </div>
+                    <div>
+                        <div class="flex justify-between mb-1"><label class="text-[9px] font-bold text-gray-500 uppercase">Grosor de Borde</label><span id="strokeVal" class="text-[9px] font-bold text-[#699BFF]">8</span></div>
+                        <input type="range" id="strokeWidth" min="0" max="20" value="8" oninput="updateActiveLayer()" class="w-full accent-[#699BFF]">
                     </div>
                 </div>
 
@@ -234,7 +242,15 @@
                     const l = layers[i];
                     if (l.type === 'text') {
                         ctx.font = `bold ${l.size}px ${l.fontFamily}`;
-                        if (pos.x > l.x - 150 && pos.x < l.x + 150 && pos.y > l.y - l.size && pos.y < l.y + l.size) { found = i; break; }
+                        const lines = l.text.split('\n');
+                        const metrics = getMultiLineMetrics(lines, l.size, l.fontFamily);
+                        // Detección de hit box dinámica para multilínea
+                        if (pos.x > l.x - (metrics.maxWidth/2) - 20 && 
+                            pos.x < l.x + (metrics.maxWidth/2) + 20 && 
+                            pos.y > l.y - l.size && 
+                            pos.y < l.y + metrics.totalHeight - (l.size * 0.5)) { 
+                            found = i; break; 
+                        }
                     } else {
                         if (pos.x > l.x && pos.x < l.x + l.width && pos.y > l.y && pos.y < l.y + l.height) { found = i; break; }
                     }
@@ -268,6 +284,20 @@
             cropCanvas.addEventListener('touchstart', (e) => startCropDrag(e), { passive: false });
         }
 
+        // Función auxiliar para calcular medidas de texto con saltos de línea
+        function getMultiLineMetrics(lines, size, fontFamily) {
+            ctx.font = `bold ${size}px ${fontFamily}`;
+            let maxWidth = 0;
+            lines.forEach(line => {
+                const w = ctx.measureText(line.toUpperCase()).width;
+                if (w > maxWidth) maxWidth = w;
+            });
+            return {
+                maxWidth: maxWidth,
+                totalHeight: lines.length * (size * 1.1)
+            };
+        }
+
         function selectLayer(index) {
             selectedLayerIndex = index;
             const panel = document.getElementById('editorPanel'), msg = document.getElementById('noSelectionMsg');
@@ -283,13 +313,14 @@
                     document.getElementById('layerSize').value = l.size;
                     document.getElementById('textColor').value = l.color;
                     document.getElementById('strokeColor').value = l.stroke;
+                    document.getElementById('strokeWidth').value = l.strokeWidth || 8;
                     document.getElementById('sizeVal').innerText = l.size + 'px';
+                    document.getElementById('strokeVal').innerText = l.strokeWidth || 8;
                 } else {
                     document.getElementById('layerSize').value = l.width;
                     document.getElementById('sizeVal').innerText = Math.round(l.width) + 'px';
                 }
                 
-                // MEJORA 2: Mostrar aviso en lugar de desplazar automáticamente
                 if (window.innerWidth < 768) {
                     editNotice.style.opacity = '1';
                     setTimeout(() => { editNotice.style.opacity = '0'; }, 3000);
@@ -304,25 +335,44 @@
             layers.forEach((l, i) => {
                 ctx.save();
                 if (l.type === 'text') {
-                    ctx.textAlign = 'center'; ctx.font = `bold ${l.size}px ${l.fontFamily}`;
+                    ctx.lineJoin = 'round';
+                    ctx.lineCap = 'round';
+                    ctx.textAlign = 'center'; 
+                    ctx.font = `bold ${l.size}px ${l.fontFamily}`;
+                    
                     const lines = l.text.split('\n');
+                    const strokeW = l.strokeWidth || (l.size / 7);
+                    
                     lines.forEach((line, idx) => {
                         const y = l.y + (idx * l.size * 1.1);
-                        ctx.strokeStyle = l.stroke; ctx.lineWidth = l.size / 7; ctx.strokeText(line.toUpperCase(), l.x, y);
+                        ctx.strokeStyle = l.stroke; ctx.lineWidth = strokeW; ctx.strokeText(line.toUpperCase(), l.x, y);
                         ctx.fillStyle = l.color; ctx.fillText(line.toUpperCase(), l.x, y);
                     });
-                } else { ctx.drawImage(l.img, l.x, l.y, l.width, l.height); }
-                if (i === selectedLayerIndex) {
-                    ctx.strokeStyle = '#699BFF'; ctx.lineWidth = 3; ctx.setLineDash([5, 5]);
-                    if (l.type === 'text') ctx.strokeRect(l.x - 150, l.y - l.size, 300, l.size * 1.5);
-                    else ctx.strokeRect(l.x, l.y, l.width, l.height);
+
+                    if (i === selectedLayerIndex) {
+                        const metrics = getMultiLineMetrics(lines, l.size, l.fontFamily);
+                        ctx.strokeStyle = '#699BFF'; ctx.lineWidth = 3; ctx.setLineDash([5, 5]);
+                        // El cuadro ahora rodea todas las líneas de texto
+                        ctx.strokeRect(
+                            l.x - (metrics.maxWidth / 2) - 15, 
+                            l.y - l.size, 
+                            metrics.maxWidth + 30, 
+                            metrics.totalHeight
+                        );
+                    }
+                } else { 
+                    ctx.drawImage(l.img, l.x, l.y, l.width, l.height); 
+                    if (i === selectedLayerIndex) {
+                        ctx.strokeStyle = '#699BFF'; ctx.lineWidth = 3; ctx.setLineDash([5, 5]);
+                        ctx.strokeRect(l.x, l.y, l.width, l.height);
+                    }
                 }
                 ctx.restore();
             });
         }
 
         function addTextLayer() {
-            layers.push({ type: 'text', text: 'TEXTO AQUÍ', x: canvas.width / 2, y: canvas.height / 2, size: 60, color: '#ffffff', stroke: '#000000', fontFamily: 'Impact, sans-serif' });
+            layers.push({ type: 'text', text: 'TEXTO AQUÍ', x: canvas.width / 2, y: canvas.height / 2, size: 60, color: '#ffffff', stroke: '#000000', strokeWidth: 8, fontFamily: 'Impact, sans-serif' });
             selectLayer(layers.length - 1);
         }
 
@@ -385,7 +435,9 @@
             if (l.type === 'text') {
                 l.text = document.getElementById('textInput').value; l.size = val;
                 l.color = document.getElementById('textColor').value; l.stroke = document.getElementById('strokeColor').value;
+                l.strokeWidth = parseInt(document.getElementById('strokeWidth').value);
                 document.getElementById('sizeVal').innerText = val + 'px';
+                document.getElementById('strokeVal').innerText = l.strokeWidth;
             } else {
                 l.width = val; l.height = val * l.originalRatio;
                 document.getElementById('sizeVal').innerText = val + 'px';
