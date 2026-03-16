@@ -24,8 +24,9 @@
         }
         
         #cropModal { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.9); z-index: 100; align-items: center; justify-content: center; padding: 10px; }
-        #cropContainer { background: #1c1e25; padding: 15px; border-radius: 16px; width: 95%; max-width: 500px; display: flex; flex-direction: column; gap: 10px; }
-        #cropCanvas { max-width: 100%; max-height: 60vh; border: 1px solid #4a4d5a; touch-action: none; }
+        #cropContainer { background: #1c1e25; padding: 15px; border-radius: 16px; width: 95%; max-width: 600px; display: flex; flex-direction: column; gap: 10px; }
+        #cropCanvasWrapper { position: relative; width: 100%; display: flex; justify-content: center; overflow: hidden; background: #000; border-radius: 8px; }
+        #cropCanvas { max-width: 100%; max-height: 60vh; cursor: crosshair; touch-action: none; }
 
         .font-option { padding: 10px; border-radius: 8px; cursor: pointer; transition: background 0.2s; color: white; border: 1px solid transparent; }
         .font-option:hover { background: #3d414d; border-color: #699BFF; }
@@ -70,11 +71,16 @@
     <!-- Modal de Recorte -->
     <div id="cropModal">
         <div id="cropContainer">
-            <h3 class="text-sm font-black text-[#699BFF] uppercase">Recortar Imagen</h3>
-            <canvas id="cropCanvas"></canvas>
+            <div class="flex justify-between items-center mb-2">
+                <h3 class="text-sm font-black text-[#699BFF] uppercase">Ajustar Recorte</h3>
+                <span class="text-[10px] text-gray-400">Arrastra bordes o esquinas</span>
+            </div>
+            <div id="cropCanvasWrapper">
+                <canvas id="cropCanvas"></canvas>
+            </div>
             <div class="flex justify-end gap-3 mt-2">
                 <button onclick="closeCropModal()" class="px-4 py-2 rounded-lg bg-gray-700 text-xs font-bold">Cancelar</button>
-                <button onclick="applyCrop()" class="px-6 py-2 rounded-lg bg-[#699BFF] text-xs font-bold text-white">Aplicar</button>
+                <button onclick="applyCrop()" class="px-6 py-2 rounded-lg bg-[#699BFF] text-xs font-bold text-white uppercase">Confirmar Recorte</button>
             </div>
         </div>
     </div>
@@ -107,7 +113,7 @@
                 </button>
                 <button onclick="triggerOverlayUpload()" class="flex flex-col items-center gap-1 group">
                     <div class="bg-[#2d303a] p-3 rounded-xl group-hover:bg-[#699BFF] transition-all"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M12 8v8M8 12h8"/></svg></div>
-                    <span class="text-[9px] font-bold text-gray-400 uppercase">Sticker</span>
+                    <span class="text-[9px] font-bold text-gray-400 uppercase">Imagen</span>
                     <input type="file" id="overlayFileInput" accept="image/*" class="hidden" onchange="handleOverlayUpload(event)">
                 </button>
                 <button onclick="triggerMainUpload()" class="flex flex-col items-center gap-1 group">
@@ -127,7 +133,7 @@
             <div id="editorPanel" class="hidden space-y-6">
                 <div class="flex justify-between items-center border-b border-[#2d303a] pb-4">
                     <h2 class="text-[10px] font-black text-[#699BFF] uppercase tracking-widest">Ajustes</h2>
-                    <button onclick="deleteSelectedLayer()" class="text-[9px] font-bold text-red-400 bg-red-400/10 px-3 py-2 rounded-lg">ELIMINAR</button>
+                    <button id="deleteBtn" onclick="deleteSelectedLayer()" class="text-[9px] font-bold text-red-400 bg-red-400/10 px-3 py-2 rounded-lg">ELIMINAR</button>
                 </div>
 
                 <div id="textControls" class="space-y-4">
@@ -159,7 +165,11 @@
                     <button onclick="openCropModal(false)" class="w-full bg-[#699BFF]/10 text-[#699BFF] border border-[#699BFF]/30 rounded-xl py-3 text-[10px] font-bold uppercase">Recortar Imagen</button>
                 </div>
 
-                <div class="pt-4 border-t border-[#2d303a]">
+                <div id="backgroundControls" class="hidden space-y-4">
+                    <button onclick="openCropModal(true)" class="w-full bg-[#699BFF]/10 text-[#699BFF] border border-[#699BFF]/30 rounded-xl py-3 text-[10px] font-bold uppercase">Recortar Fondo</button>
+                </div>
+
+                <div id="sizeControlGroup" class="pt-4 border-t border-[#2d303a]">
                     <div class="flex justify-between mb-2"><label class="text-[9px] font-bold text-gray-500 uppercase">Tamaño</label><span id="sizeVal" class="text-[9px] font-bold text-[#699BFF]">60px</span></div>
                     <input type="range" id="layerSize" min="10" max="800" value="60" oninput="updateActiveLayer()" class="w-full accent-[#699BFF]">
                 </div>
@@ -175,8 +185,13 @@
         const editNotice = document.getElementById('editNotice');
         
         let activeImage = new Image(); activeImage.crossOrigin = "anonymous";
+        let originalFullImage = null; // Guardamos la imagen completa del fondo para recortes
         let layers = [], selectedLayerIndex = -1, isDragging = false, dragStartX, dragStartY;
-        let cropArea = { x: 50, y: 50, w: 200, h: 200 }, croppingMain = false;
+        
+        // Estado de recorte
+        let cropArea = { x: 50, y: 50, w: 200, h: 200 };
+        let croppingMain = false;
+        let activeHandle = null;
 
         const templates = [
             { url: "https://i.imgflip.com/30b1gx.jpg" },
@@ -219,7 +234,7 @@
                 div.className = 'font-option';
                 div.style.fontFamily = f.family;
                 div.innerText = f.name;
-                div.onclick = () => { if (selectedLayerIndex !== -1) { layers[selectedLayerIndex].fontFamily = f.family; drawMeme(); } };
+                div.onclick = () => { if (selectedLayerIndex !== -1 && layers[selectedLayerIndex].type === 'text') { layers[selectedLayerIndex].fontFamily = f.family; drawMeme(); } };
                 grid.appendChild(div);
             });
         }
@@ -244,7 +259,6 @@
                         ctx.font = `bold ${l.size}px ${l.fontFamily}`;
                         const lines = l.text.split('\n');
                         const metrics = getMultiLineMetrics(lines, l.size, l.fontFamily);
-                        // Detección de hit box dinámica para multilínea
                         if (pos.x > l.x - (metrics.maxWidth/2) - 20 && 
                             pos.x < l.x + (metrics.maxWidth/2) + 20 && 
                             pos.y > l.y - l.size && 
@@ -255,15 +269,20 @@
                         if (pos.x > l.x && pos.x < l.x + l.width && pos.y > l.y && pos.y < l.y + l.height) { found = i; break; }
                     }
                 }
+                
                 if (found !== -1) {
                     if (e.cancelable) e.preventDefault();
                     selectLayer(found);
                     isDragging = true; dragStartX = pos.x - layers[found].x; dragStartY = pos.y - layers[found].y;
-                } else { selectLayer(-1); isDragging = false; }
+                } else { 
+                    // Si clicamos en el fondo
+                    selectLayer(-2); 
+                    isDragging = false; 
+                }
             };
 
             const onMove = (e) => {
-                if (!isDragging || selectedLayerIndex === -1) return;
+                if (!isDragging || selectedLayerIndex < 0) return;
                 if (e.cancelable) e.preventDefault();
                 const pos = getCoords(e);
                 layers[selectedLayerIndex].x = pos.x - dragStartX;
@@ -280,11 +299,15 @@
             canvas.addEventListener('touchmove', onMove, { passive: false });
             canvas.addEventListener('touchend', onEnd);
 
-            cropCanvas.addEventListener('mousedown', (e) => startCropDrag(e));
-            cropCanvas.addEventListener('touchstart', (e) => startCropDrag(e), { passive: false });
+            // Eventos de Recorte
+            cropCanvas.addEventListener('mousedown', startCropInteraction);
+            window.addEventListener('mousemove', moveCropInteraction);
+            window.addEventListener('mouseup', endCropInteraction);
+            cropCanvas.addEventListener('touchstart', startCropInteraction, { passive: false });
+            window.addEventListener('touchmove', moveCropInteraction, { passive: false });
+            window.addEventListener('touchend', endCropInteraction);
         }
 
-        // Función auxiliar para calcular medidas de texto con saltos de línea
         function getMultiLineMetrics(lines, size, fontFamily) {
             ctx.font = `bold ${size}px ${fontFamily}`;
             let maxWidth = 0;
@@ -292,18 +315,33 @@
                 const w = ctx.measureText(line.toUpperCase()).width;
                 if (w > maxWidth) maxWidth = w;
             });
-            return {
-                maxWidth: maxWidth,
-                totalHeight: lines.length * (size * 1.1)
-            };
+            return { maxWidth: maxWidth, totalHeight: lines.length * (size * 1.1) };
         }
 
         function selectLayer(index) {
             selectedLayerIndex = index;
             const panel = document.getElementById('editorPanel'), msg = document.getElementById('noSelectionMsg');
-            if (index === -1) { panel.classList.add('hidden'); msg.classList.remove('hidden'); }
-            else {
+            const deleteBtn = document.getElementById('deleteBtn');
+            const bgControls = document.getElementById('backgroundControls');
+            const sizeGroup = document.getElementById('sizeControlGroup');
+
+            if (index === -1) { 
+                panel.classList.add('hidden'); 
+                msg.classList.remove('hidden'); 
+            } else if (index === -2) {
+                // Fondo seleccionado
                 panel.classList.remove('hidden'); msg.classList.add('hidden');
+                document.getElementById('textControls').classList.add('hidden');
+                document.getElementById('imageControls').classList.add('hidden');
+                bgControls.classList.remove('hidden');
+                deleteBtn.classList.add('hidden');
+                sizeGroup.classList.add('hidden');
+            } else {
+                panel.classList.remove('hidden'); msg.classList.add('hidden');
+                deleteBtn.classList.remove('hidden');
+                bgControls.classList.add('hidden');
+                sizeGroup.classList.remove('hidden');
+
                 const l = layers[index];
                 const isText = l.type === 'text';
                 document.getElementById('textControls').classList.toggle('hidden', !isText);
@@ -320,11 +358,6 @@
                     document.getElementById('layerSize').value = l.width;
                     document.getElementById('sizeVal').innerText = Math.round(l.width) + 'px';
                 }
-                
-                if (window.innerWidth < 768) {
-                    editNotice.style.opacity = '1';
-                    setTimeout(() => { editNotice.style.opacity = '0'; }, 3000);
-                }
             }
             drawMeme();
         }
@@ -335,30 +368,19 @@
             layers.forEach((l, i) => {
                 ctx.save();
                 if (l.type === 'text') {
-                    ctx.lineJoin = 'round';
-                    ctx.lineCap = 'round';
-                    ctx.textAlign = 'center'; 
+                    ctx.lineJoin = 'round'; ctx.lineCap = 'round'; ctx.textAlign = 'center'; 
                     ctx.font = `bold ${l.size}px ${l.fontFamily}`;
-                    
                     const lines = l.text.split('\n');
                     const strokeW = l.strokeWidth || (l.size / 7);
-                    
                     lines.forEach((line, idx) => {
                         const y = l.y + (idx * l.size * 1.1);
                         ctx.strokeStyle = l.stroke; ctx.lineWidth = strokeW; ctx.strokeText(line.toUpperCase(), l.x, y);
                         ctx.fillStyle = l.color; ctx.fillText(line.toUpperCase(), l.x, y);
                     });
-
                     if (i === selectedLayerIndex) {
                         const metrics = getMultiLineMetrics(lines, l.size, l.fontFamily);
                         ctx.strokeStyle = '#699BFF'; ctx.lineWidth = 3; ctx.setLineDash([5, 5]);
-                        // El cuadro ahora rodea todas las líneas de texto
-                        ctx.strokeRect(
-                            l.x - (metrics.maxWidth / 2) - 15, 
-                            l.y - l.size, 
-                            metrics.maxWidth + 30, 
-                            metrics.totalHeight
-                        );
+                        ctx.strokeRect(l.x - (metrics.maxWidth / 2) - 15, l.y - l.size, metrics.maxWidth + 30, metrics.totalHeight);
                     }
                 } else { 
                     ctx.drawImage(l.img, l.x, l.y, l.width, l.height); 
@@ -369,67 +391,138 @@
                 }
                 ctx.restore();
             });
+            // Overlay de selección de fondo
+            if (selectedLayerIndex === -2) {
+                ctx.strokeStyle = '#699BFF'; ctx.lineWidth = 8; ctx.strokeRect(0, 0, canvas.width, canvas.height);
+            }
         }
 
-        function addTextLayer() {
-            layers.push({ type: 'text', text: 'TEXTO AQUÍ', x: canvas.width / 2, y: canvas.height / 2, size: 60, color: '#ffffff', stroke: '#000000', strokeWidth: 8, fontFamily: 'Impact, sans-serif' });
-            selectLayer(layers.length - 1);
-        }
-
-        function triggerOverlayUpload() { document.getElementById('overlayFileInput').click(); }
-        function handleOverlayUpload(e) {
-            const f = e.target.files[0]; if (!f) return;
-            const r = new FileReader();
-            r.onload = (ev) => {
-                const img = new Image(); img.src = ev.target.result;
-                img.onload = () => {
-                    layers.push({ type: 'image', img: img, originalImg: img, x: 50, y: 50, width: 250, height: 250 * (img.height / img.width), originalRatio: img.height / img.width });
-                    selectLayer(layers.length - 1);
-                };
-            };
-            r.readAsDataURL(f);
-        }
-
+        // --- SISTEMA DE RECORTE ---
         function openCropModal(isMain) {
             croppingMain = isMain;
-            const l = layers[selectedLayerIndex]; if (!l) return;
+            const imgToCrop = isMain ? originalFullImage : layers[selectedLayerIndex].originalImg;
+            if (!imgToCrop) return;
+            
             document.getElementById('cropModal').style.display = 'flex';
-            cropCanvas.width = l.originalImg.width; cropCanvas.height = l.originalImg.height;
-            cropArea = { x: 50, y: 50, w: cropCanvas.width * 0.5, h: cropCanvas.height * 0.5 };
+            
+            // Ajustar canvas de recorte al tamaño de la imagen real
+            cropCanvas.width = imgToCrop.width;
+            cropCanvas.height = imgToCrop.height;
+            
+            // Área inicial (un poco más pequeña que la imagen)
+            cropArea = { x: imgToCrop.width*0.1, y: imgToCrop.height*0.1, w: imgToCrop.width*0.8, h: imgToCrop.height*0.8 };
             drawCrop();
         }
 
         function drawCrop() {
-            const l = layers[selectedLayerIndex];
-            cropCtx.drawImage(l.originalImg, 0, 0);
-            cropCtx.fillStyle = 'rgba(0,0,0,0.6)';
-            cropCtx.fillRect(0, 0, cropCanvas.width, cropCanvas.height);
-            cropCtx.clearRect(cropArea.x, cropArea.y, cropArea.w, cropArea.h);
-            cropCtx.drawImage(l.originalImg, cropArea.x, cropArea.y, cropArea.w, cropArea.h, cropArea.x, cropArea.y, cropArea.w, cropArea.h);
-            cropCtx.strokeStyle = '#699BFF'; cropCtx.lineWidth = 5; cropCtx.strokeRect(cropArea.x, cropArea.y, cropArea.w, cropArea.h);
+            const img = croppingMain ? originalFullImage : layers[selectedLayerIndex].originalImg;
+            cropCtx.clearRect(0, 0, cropCanvas.width, cropCanvas.height);
+            cropCtx.drawImage(img, 0, 0);
+            
+            // Oscurecer fuera del área
+            cropCtx.fillStyle = 'rgba(0,0,0,0.7)';
+            cropCtx.fillRect(0, 0, cropCanvas.width, cropArea.y);
+            cropCtx.fillRect(0, cropArea.y + cropArea.h, cropCanvas.width, cropCanvas.height - (cropArea.y + cropArea.h));
+            cropCtx.fillRect(0, cropArea.y, cropArea.x, cropArea.h);
+            cropCtx.fillRect(cropArea.x + cropArea.w, cropArea.y, cropCanvas.width - (cropArea.x + cropArea.w), cropArea.h);
+
+            // Borde selección
+            cropCtx.strokeStyle = '#699BFF'; cropCtx.lineWidth = Math.max(2, cropCanvas.width/200);
+            cropCtx.strokeRect(cropArea.x, cropArea.y, cropArea.w, cropArea.h);
+
+            // Dibujar manejadores (handles)
+            const handleSize = Math.max(10, cropCanvas.width/50);
+            cropCtx.fillStyle = '#699BFF';
+            // Esquinas
+            cropCtx.fillRect(cropArea.x - handleSize/2, cropArea.y - handleSize/2, handleSize, handleSize);
+            cropCtx.fillRect(cropArea.x + cropArea.w - handleSize/2, cropArea.y - handleSize/2, handleSize, handleSize);
+            cropCtx.fillRect(cropArea.x - handleSize/2, cropArea.y + cropArea.h - handleSize/2, handleSize, handleSize);
+            cropCtx.fillRect(cropArea.x + cropArea.w - handleSize/2, cropArea.y + cropArea.h - handleSize/2, handleSize, handleSize);
+            // Bordes (centrados)
+            cropCtx.fillRect(cropArea.x + cropArea.w/2 - handleSize/2, cropArea.y - handleSize/2, handleSize, handleSize);
+            cropCtx.fillRect(cropArea.x + cropArea.w/2 - handleSize/2, cropArea.y + cropArea.h - handleSize/2, handleSize, handleSize);
+            cropCtx.fillRect(cropArea.x - handleSize/2, cropArea.y + cropArea.h/2 - handleSize/2, handleSize, handleSize);
+            cropCtx.fillRect(cropArea.x + cropArea.w - handleSize/2, cropArea.y + cropArea.h/2 - handleSize/2, handleSize, handleSize);
         }
 
-        function startCropDrag(e) {
-            const pos = {
-                x: (e.touches ? e.touches[0].clientX : e.clientX) - cropCanvas.getBoundingClientRect().left,
-                y: (e.touches ? e.touches[0].clientY : e.clientY) - cropCanvas.getBoundingClientRect().top
-            };
-            cropArea.w = pos.x - cropArea.x; cropArea.h = pos.y - cropArea.y;
+        function startCropInteraction(e) {
+            const rect = cropCanvas.getBoundingClientRect();
+            const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+            const clientY = e.touches ? e.touches[0].clientY : e.clientY;
+            const x = (clientX - rect.left) * (cropCanvas.width / rect.width);
+            const y = (clientY - rect.top) * (cropCanvas.height / rect.height);
+            
+            const tol = Math.max(20, cropCanvas.width/30);
+            activeHandle = null;
+
+            // Detectar handle
+            if (Math.abs(x - cropArea.x) < tol && Math.abs(y - cropArea.y) < tol) activeHandle = 'tl';
+            else if (Math.abs(x - (cropArea.x + cropArea.w)) < tol && Math.abs(y - cropArea.y) < tol) activeHandle = 'tr';
+            else if (Math.abs(x - cropArea.x) < tol && Math.abs(y - (cropArea.y + cropArea.h)) < tol) activeHandle = 'bl';
+            else if (Math.abs(x - (cropArea.x + cropArea.w)) < tol && Math.abs(y - (cropArea.y + cropArea.h)) < tol) activeHandle = 'br';
+            else if (Math.abs(y - cropArea.y) < tol && x > cropArea.x && x < cropArea.x + cropArea.w) activeHandle = 't';
+            else if (Math.abs(y - (cropArea.y + cropArea.h)) < tol && x > cropArea.x && x < cropArea.x + cropArea.w) activeHandle = 'b';
+            else if (Math.abs(x - cropArea.x) < tol && y > cropArea.y && y < cropArea.y + cropArea.h) activeHandle = 'l';
+            else if (Math.abs(x - (cropArea.x + cropArea.w)) < tol && y > cropArea.y && y < cropArea.y + cropArea.h) activeHandle = 'r';
+            else if (x > cropArea.x && x < cropArea.x + cropArea.w && y > cropArea.y && y < cropArea.y + cropArea.h) activeHandle = 'move';
+            
+            if (activeHandle) {
+                if (e.cancelable) e.preventDefault();
+                dragStartX = x; dragStartY = y;
+            }
+        }
+
+        function moveCropInteraction(e) {
+            if (!activeHandle) return;
+            const rect = cropCanvas.getBoundingClientRect();
+            const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+            const clientY = e.touches ? e.touches[0].clientY : e.clientY;
+            const x = (clientX - rect.left) * (cropCanvas.width / rect.width);
+            const y = (clientY - rect.top) * (cropCanvas.height / rect.height);
+            const dx = x - dragStartX; const dy = y - dragStartY;
+
+            if (activeHandle === 'move') {
+                cropArea.x += dx; cropArea.y += dy;
+            } else {
+                if (activeHandle.includes('l')) { cropArea.x += dx; cropArea.w -= dx; }
+                if (activeHandle.includes('r')) { cropArea.w += dx; }
+                if (activeHandle.includes('t')) { cropArea.y += dy; cropArea.h -= dy; }
+                if (activeHandle.includes('b')) { cropArea.h += dy; }
+            }
+
+            // Restricciones
+            if (cropArea.w < 20) cropArea.w = 20; if (cropArea.h < 20) cropArea.h = 20;
+            if (cropArea.x < 0) cropArea.x = 0; if (cropArea.y < 0) cropArea.y = 0;
+            if (cropArea.x + cropArea.w > cropCanvas.width) cropArea.w = cropCanvas.width - cropArea.x;
+            if (cropArea.y + cropArea.h > cropCanvas.height) cropArea.h = cropCanvas.height - cropArea.y;
+
+            dragStartX = x; dragStartY = y;
             drawCrop();
         }
 
+        function endCropInteraction() { activeHandle = null; }
+
         function applyCrop() {
-            const l = layers[selectedLayerIndex];
+            const imgSource = croppingMain ? originalFullImage : layers[selectedLayerIndex].originalImg;
             const tempC = document.createElement('canvas'); tempC.width = cropArea.w; tempC.height = cropArea.h;
-            tempC.getContext('2d').drawImage(l.originalImg, cropArea.x, cropArea.y, cropArea.w, cropArea.h, 0, 0, cropArea.w, cropArea.h);
+            tempC.getContext('2d').drawImage(imgSource, cropArea.x, cropArea.y, cropArea.w, cropArea.h, 0, 0, cropArea.w, cropArea.h);
             const ni = new Image(); ni.src = tempC.toDataURL();
-            ni.onload = () => { l.img = ni; l.originalRatio = ni.height / ni.width; l.height = l.width * l.originalRatio; closeCropModal(); drawMeme(); };
+            ni.onload = () => { 
+                if (croppingMain) {
+                    activeImage = ni;
+                    canvas.width = 800; canvas.height = 800 * (ni.height / ni.width);
+                } else {
+                    const l = layers[selectedLayerIndex];
+                    l.img = ni; l.originalRatio = ni.height / ni.width; l.height = l.width * l.originalRatio;
+                }
+                closeCropModal(); drawMeme(); 
+            };
         }
 
         function closeCropModal() { document.getElementById('cropModal').style.display = 'none'; }
 
         function updateActiveLayer() {
-            if (selectedLayerIndex === -1) return;
+            if (selectedLayerIndex < 0) return;
             const l = layers[selectedLayerIndex];
             const val = parseInt(document.getElementById('layerSize').value);
             if (l.type === 'text') {
@@ -447,7 +540,31 @@
 
         function loadMeme(url) {
             const img = new Image(); img.crossOrigin = "anonymous"; img.src = url;
-            img.onload = () => { activeImage = img; canvas.width = 800; canvas.height = 800 * (img.height / img.width); drawMeme(); };
+            img.onload = () => { 
+                originalFullImage = img; // Guardar siempre la original para recortes posteriores
+                activeImage = img; 
+                canvas.width = 800; canvas.height = 800 * (img.height / img.width); 
+                drawMeme(); 
+            };
+        }
+
+        function addTextLayer() {
+            layers.push({ type: 'text', text: 'NUEVO TEXTO', x: canvas.width / 2, y: canvas.height / 2, size: 60, color: '#ffffff', stroke: '#000000', strokeWidth: 8, fontFamily: 'Impact, sans-serif' });
+            selectLayer(layers.length - 1);
+        }
+
+        function triggerOverlayUpload() { document.getElementById('overlayFileInput').click(); }
+        function handleOverlayUpload(e) {
+            const f = e.target.files[0]; if (!f) return;
+            const r = new FileReader();
+            r.onload = (ev) => {
+                const img = new Image(); img.src = ev.target.result;
+                img.onload = () => {
+                    layers.push({ type: 'image', img: img, originalImg: img, x: 50, y: 50, width: 250, height: 250 * (img.height / img.width), originalRatio: img.height / img.width });
+                    selectLayer(layers.length - 1);
+                };
+            };
+            r.readAsDataURL(f);
         }
 
         function triggerMainUpload() { document.getElementById('mainFileInput').click(); }
@@ -456,10 +573,10 @@
             const r = new FileReader(); r.onload = (ev) => loadMeme(ev.target.result); r.readAsDataURL(f);
         }
 
-        function deleteSelectedLayer() { if (selectedLayerIndex !== -1) { layers.splice(selectedLayerIndex, 1); selectLayer(-1); } }
+        function deleteSelectedLayer() { if (selectedLayerIndex >= 0) { layers.splice(selectedLayerIndex, 1); selectLayer(-1); } }
         function downloadMeme() {
             const cur = selectedLayerIndex; selectedLayerIndex = -1; drawMeme();
-            setTimeout(() => { const a = document.createElement('a'); a.download = 'meme.png'; a.href = canvas.toDataURL(); a.click(); selectedLayerIndex = cur; drawMeme(); }, 50);
+            setTimeout(() => { const a = document.createElement('a'); a.download = (document.getElementById('filenameInput').value || 'meme') + '.png'; a.href = canvas.toDataURL(); a.click(); selectedLayerIndex = cur; drawMeme(); }, 50);
         }
 
         window.onload = init;
