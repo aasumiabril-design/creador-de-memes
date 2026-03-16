@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>MemeGen Pro - Completo</title>
+    <title>MemeGen Pro - Ajustado</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://fonts.googleapis.com/css2?family=Anton&family=Arimo:wght@700&family=Bebas+Neue&family=Caveat:wght@700&family=Comic+Neue:wght@700&family=Fira+Sans:wght@900&family=Inter:wght@900&family=Lobster&family=Montserrat:wght@900&family=Open+Sans:wght@800&family=Oswald:wght@700&family=Pacifico&family=Playfair+Display:ital,wght@1,900&family=Raleway:wght@900&family=Roboto+Condensed:wght@700&family=Rubik+Mono+One&family=Staatliches&family=Teko:wght@700&family=Titillium+Web:wght@900&family=Ubuntu:wght@700&display=swap" rel="stylesheet">
     <style>
@@ -13,7 +13,16 @@
         .scroll::-webkit-scrollbar-track { background: #2d303a; }
         .scroll::-webkit-scrollbar-thumb { background: #4a4d5a; border-radius: 10px; }
 
-        canvas { max-width: 100%; height: auto; border-radius: 8px; background-color: #000; box-shadow: 0 10px 30px rgba(0,0,0,0.5); touch-action: pan-y; }
+        /* Mejora 1: Asegurar que el canvas no sea tapado por botones en móvil */
+        canvas { 
+            max-width: 100%; 
+            max-height: 70vh; /* Limita la altura para dejar espacio abajo */
+            height: auto; 
+            border-radius: 8px; 
+            background-color: #000; 
+            box-shadow: 0 10px 30px rgba(0,0,0,0.5); 
+            touch-action: pan-y; 
+        }
         
         #cropModal { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.9); z-index: 100; align-items: center; justify-content: center; padding: 10px; }
         #cropContainer { background: #1c1e25; padding: 15px; border-radius: 16px; width: 95%; max-width: 500px; display: flex; flex-direction: column; gap: 10px; }
@@ -22,16 +31,43 @@
         .font-option { padding: 10px; border-radius: 8px; cursor: pointer; transition: background 0.2s; color: white; border: 1px solid transparent; }
         .font-option:hover { background: #3d414d; border-color: #699BFF; }
 
+        /* Aviso de edición (Mejora 2) */
+        #editNotice {
+            position: fixed;
+            top: 80px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: #699BFF;
+            color: white;
+            padding: 8px 16px;
+            border-radius: 20px;
+            font-size: 11px;
+            font-weight: bold;
+            z-index: 50;
+            opacity: 0;
+            transition: opacity 0.3s;
+            pointer-events: none;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+        }
+
         @media (max-width: 768px) {
             .desktop-only { display: none; }
             main { flex-direction: column; height: auto !important; }
-            .canvas-section { min-height: 400px; padding: 20px 10px; }
+            .canvas-section { 
+                height: 80vh; /* Espacio definido para trabajar */
+                padding: 10px; 
+                display: flex;
+                align-items: flex-start; /* Empieza desde arriba */
+                padding-top: 20px;
+            }
             aside { width: 100% !important; border: none !important; }
-            #editorPanel { padding-bottom: 80px; }
+            #editorPanel { padding-bottom: 120px; }
         }
     </style>
 </head>
 <body class="md:h-screen flex flex-col">
+
+    <div id="editNotice">Ajustes disponibles abajo ↓</div>
 
     <!-- Modal de Recorte -->
     <div id="cropModal">
@@ -128,6 +164,7 @@
         const ctx = canvas.getContext('2d');
         const cropCanvas = document.getElementById('cropCanvas');
         const cropCtx = cropCanvas.getContext('2d');
+        const editNotice = document.getElementById('editNotice');
         
         let activeImage = new Image(); activeImage.crossOrigin = "anonymous";
         let layers = [], selectedLayerIndex = -1, isDragging = false, dragStartX, dragStartY;
@@ -197,7 +234,6 @@
                     const l = layers[i];
                     if (l.type === 'text') {
                         ctx.font = `bold ${l.size}px ${l.fontFamily}`;
-                        const w = ctx.measureText(l.text.split('\n')[0].toUpperCase()).width;
                         if (pos.x > l.x - 150 && pos.x < l.x + 150 && pos.y > l.y - l.size && pos.y < l.y + l.size) { found = i; break; }
                     } else {
                         if (pos.x > l.x && pos.x < l.x + l.width && pos.y > l.y && pos.y < l.y + l.height) { found = i; break; }
@@ -252,7 +288,12 @@
                     document.getElementById('layerSize').value = l.width;
                     document.getElementById('sizeVal').innerText = Math.round(l.width) + 'px';
                 }
-                if (window.innerWidth < 768) document.getElementById('sidebarEditor').scrollIntoView({ behavior: 'smooth' });
+                
+                // MEJORA 2: Mostrar aviso en lugar de desplazar automáticamente
+                if (window.innerWidth < 768) {
+                    editNotice.style.opacity = '1';
+                    setTimeout(() => { editNotice.style.opacity = '0'; }, 3000);
+                }
             }
             drawMeme();
         }
